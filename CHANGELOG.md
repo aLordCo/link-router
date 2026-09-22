@@ -21,6 +21,9 @@ Maintenance release focused entirely on macOS.
   pick LinkRouter as the http/https handler (macOS has no API to switch it
   programmatically). The “Check” button reads the current default handler
   back from LaunchServices.
+- **macOS: LinkRouter now shows up in the “Default web browser” list.** The
+  bundle declares `CFBundleURLTypes` (http/https) plus HTML/XHTML document
+  types, which is what macOS requires to offer an app as a browser option.
 
 ### Notes
 
