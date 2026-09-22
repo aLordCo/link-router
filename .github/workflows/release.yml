@@ -73,6 +73,23 @@ jobs:
 
       # El core del job: compila el binario + genera el bundle y sube los
       # instaladores como assets de un release en DRAFT (no se publica solo).
+      # Las notas se extraen de CHANGELOG.md desde la sección "## [versión]".
+      - name: Extract release notes
+        id: release_notes
+        run: |
+          NOTES="$(awk -v tag="${GITHUB_REF_NAME#v}" '
+            /^## \[/ { if (sec) exit; if (index($0, "[" tag "]") > 0) sec = 1; next }
+            sec { print }
+          ' CHANGELOG.md)"
+          if [ -z "$NOTES" ]; then
+            NOTES="## LinkRouter ${GITHUB_REF_NAME}"
+          fi
+          {
+            echo "body<<CHANGELOG_EOF"
+            printf '%s\n' "$NOTES"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build & release
         uses: tauri-apps/tauri-action@v0
         env:
@@ -80,15 +97,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'LinkRouter ${{ github.ref_name }}'
-          releaseBody: |
-            ## LinkRouter
-
-            Instaladores generados automáticamente desde el tag
-            `${{ github.ref_name }}`.
-
-            Prueba el build y si está todo bien, **publica el draft** desde la
-            página de Releases. Para firmar los instaladores más adelante, define
-            los secrets `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+          releaseBody: ${{ steps.release_notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
