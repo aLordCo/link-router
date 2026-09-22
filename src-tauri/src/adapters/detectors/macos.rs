@@ -55,7 +55,7 @@ impl MacOsBrowserDetector {
                     &application_support,
                     bundle_name,
                     &executable,
-                    icon.as_deref(),
+                    icon,
                 ));
                 break;
             }
