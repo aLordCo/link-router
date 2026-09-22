@@ -11,7 +11,7 @@ LinkRouter is a fast, lightweight, cross-platform (Linux, macOS, Windows) smart 
 ## 3. Platform & Target Specifications
 - **Operating Systems:** macOS (11+), Linux (X11/Wayland with XDG), Windows (10/11).
 - **Tech Stack:**
-  - **Frontend:** Svelte 5 (TypeScript, Tailwind CSS).
+  - **Frontend:** Svelte 5 (TypeScript, Tailwind CSS), Svelte 5 Runes for reactive state.
   - **Backend:** Rust (Tauri v2 Core + OS integration crates).
 - **Performance:**
   - Startup / window-teardown time: < 150ms.
@@ -24,8 +24,12 @@ LinkRouter is a fast, lightweight, cross-platform (Linux, macOS, Windows) smart 
 3. **Smart Rules Engine:** URL-pattern matching (`*.company.com/*`), source-app matching (e.g. "if the link comes from Slack → open in Chrome Work Profile"), and regex.
 4. **URL Sanitizer:** Automatic removal of tracking parameters (`utm_*`, `fbclid`, `gclid`, `ref_`) via silent Rust HTTP calls.
 5. **URL Unshortener:** Detect `t.co`, `bit.ly`, `tinyurl.com` → silent HTTP HEAD request in Rust to evaluate the rule with the final destination URL.
+6. **Multi-language (i18n):** UI available in **Spanish** and **English**. The language follows the OS system locale by default; unsupported locales fall back to **English**. Users can override the language explicitly in LinkRouter Settings. Implemented as a lightweight reactive store based on Svelte 5 Runes.
+7. **Theme support (dark/light):** The app follows the system light/dark preference by default, and the user can override it from LinkRouter Settings. Applied instantly across the prompter, settings and system-tray surfaces.
+8. **External config file:** All rules and application settings are read from `~/.config/link-router/config.json` (XDG config home), so users can edit, version and sync their configuration with plain files.
 
 ## 5. Non-Goals (v1)
 - Does not manage tabs within a browser.
 - Is not an ad-blocker, does not modify page content.
 - No cloud sync (v1 is 100% local).
+- No RTL/exotic locales yet (only `es` + `en` shipped initially; architecture must allow adding locales without code changes).
