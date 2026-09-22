@@ -76,6 +76,15 @@ pub fn run() {
                 }
             }
 
+            // La app vive en el tray: la ventana no debe aparecer en la barra
+            // de tareas (GNOME a veces ignora la config en Wayland).
+            let skip_taskbar = app
+                .get_webview_window("main")
+                .map(|window| window.set_skip_taskbar(true))
+                .transpose()
+                .map_err(|e| format!("could not skip taskbar: {e}"))?;
+            log::debug!("skip taskbar applied: {skip_taskbar:?}");
+
             let handle = app.handle().clone();
             app.listen("deep-link://new-url", move |event| {
                 if let Ok(urls) = serde_json::from_str::<Vec<String>>(event.payload()) {
