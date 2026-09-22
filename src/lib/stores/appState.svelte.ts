@@ -8,8 +8,10 @@ import {
   type BrowserProfile,
   type RouteDecision,
   type RouteError,
+  type ThemePref,
 } from "../services/tauri";
 import { resolveLocale, type Locale, type LocalePref } from "../i18n/locales";
+import { resolveTheme, systemPrefersDark, THEME_CACHE_KEY, type Theme } from "../theme";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export type Page = "prompter" | "settings";
@@ -47,6 +49,43 @@ export const i18n = {
       await saveSettings({ locale: pref, theme: settings.theme });
     } catch (e) {
       settings.locale = previous;
+      throw e;
+    }
+  },
+};
+
+export const themeState = $state({ systemDark: systemPrefersDark() });
+
+export const theme = {
+  get pref(): ThemePref {
+    return settings.theme;
+  },
+  get value(): Theme {
+    return resolveTheme(settings.theme, themeState.systemDark);
+  },
+  start(): void {
+    themeState.systemDark = systemPrefersDark();
+    try {
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      media.addEventListener("change", (event) => {
+        themeState.systemDark = event.matches;
+      });
+    } catch {
+      // matchMedia unavailable
+    }
+  },
+  async setTheme(pref: ThemePref): Promise<void> {
+    const previous = settings.theme;
+    settings.theme = pref;
+    try {
+      await saveSettings({ locale: settings.locale, theme: pref });
+      try {
+        localStorage.setItem(THEME_CACHE_KEY, pref);
+      } catch {
+        // storage unavailable
+      }
+    } catch (e) {
+      settings.theme = previous;
       throw e;
     }
   },

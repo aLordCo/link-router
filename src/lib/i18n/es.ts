@@ -41,6 +41,11 @@ export const es: Record<MessageKey, string> = {
   "settings.languageOptionSystem": "Sistema",
   "settings.languageOptionEs": "Español",
   "settings.languageOptionEn": "English",
+  "settings.themeTitle": "Tema",
+  "settings.themeHint": "Elegí el tema de la interfaz. “Sistema” sigue el tema del sistema operativo.",
+  "settings.themeOptionSystem": "Sistema",
+  "settings.themeOptionLight": "Claro",
+  "settings.themeOptionDark": "Oscuro",
 
   "rules.kindExact": "Exacta",
   "rules.kindDomain": "Dominio",

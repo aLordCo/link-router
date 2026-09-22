@@ -1,6 +1,10 @@
 import "./app.css";
 import { mount } from "svelte";
 import App from "./App.svelte";
+import { cachedTheme, systemPrefersDark } from "./lib/theme";
+
+document.documentElement.dataset.theme =
+  cachedTheme() ?? (systemPrefersDark() ? "dark" : "light");
 
 const target = document.getElementById("app");
 

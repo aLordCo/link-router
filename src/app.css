@@ -2,12 +2,18 @@
 
 :root {
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
 
-  color-scheme: light dark;
+/* ---- Light palette (also the pre-JS default) ---- */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
 
+  --p-page: #f5f6f8;
   --p-card: #ffffff;
   --p-card-border: rgba(16, 18, 26, 0.1);
   --p-card-hint: #eef0f4;
+  --p-card-deep: #f3f4f6;
   --p-item-hover: rgba(16, 18, 26, 0.05);
   --p-item-selected: #111827;
   --p-item-selected-text: #ffffff;
@@ -20,44 +26,59 @@
   --p-copied-bg: rgba(5, 150, 105, 0.14);
   --p-copied-text: #047857;
   --p-shadow: 0 12px 32px rgba(16, 18, 26, 0.22);
+  --p-btn-bg: #18181b;
+  --p-btn-bg-hover: #374151;
+  --p-btn-text: #ffffff;
+  --p-btn-border: rgba(16, 18, 26, 0.18);
+  --p-field: #ffffff;
+  --p-field-border: rgba(16, 18, 26, 0.16);
+  --p-badge: #eef0f4;
+  --p-badge-text: #52525b;
+  --p-danger: #dc2626;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --p-card: rgba(24, 26, 33, 0.96);
-    --p-card-border: rgba(255, 255, 255, 0.08);
-    --p-card-hint: rgba(255, 255, 255, 0.05);
-    --p-item-hover: rgba(255, 255, 255, 0.06);
-    --p-item-selected: rgba(255, 255, 255, 0.13);
-    --p-item-selected-text: #ffffff;
-    --p-text: #e8eaf0;
-    --p-muted: #9aa0ae;
-    --p-faint: #6b7280;
-    --p-accent: #34d399;
-    --p-warning-bg: rgba(245, 158, 11, 0.12);
-    --p-warning-text: #fbbf24;
-    --p-copied-bg: rgba(16, 185, 129, 0.16);
-    --p-copied-text: #34d399;
-    --p-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
-  }
+/* ---- Dark palette ---- */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --p-page: #0b0e14;
+  --p-card: rgba(24, 26, 33, 0.96);
+  --p-card-border: rgba(255, 255, 255, 0.08);
+  --p-card-hint: rgba(255, 255, 255, 0.05);
+  --p-card-deep: #10131a;
+  --p-item-hover: rgba(255, 255, 255, 0.06);
+  --p-item-selected: rgba(255, 255, 255, 0.13);
+  --p-item-selected-text: #ffffff;
+  --p-text: #e8eaf0;
+  --p-muted: #9aa0ae;
+  --p-faint: #6b7280;
+  --p-accent: #34d399;
+  --p-warning-bg: rgba(245, 158, 11, 0.12);
+  --p-warning-text: #fbbf24;
+  --p-copied-bg: rgba(16, 185, 129, 0.16);
+  --p-copied-text: #34d399;
+  --p-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+  --p-btn-bg: #f4f4f5;
+  --p-btn-bg-hover: #ffffff;
+  --p-btn-text: #18181b;
+  --p-btn-border: rgba(255, 255, 255, 0.14);
+  --p-field: #0e1116;
+  --p-field-border: rgba(255, 255, 255, 0.12);
+  --p-badge: rgba(255, 255, 255, 0.07);
+  --p-badge-text: #9aa0ae;
+  --p-danger: #f87171;
 }
 
 html,
 body {
   height: 100%;
   margin: 0;
-  background: #0b0e14;
+  background: var(--p-page);
   color: var(--p-text);
   -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: light) {
-  html,
-  body {
-    background: #f5f6f8;
-  }
-}
-
+/* ---- Palette primitives ---- */
 .palette-card {
   background: var(--p-card);
   border: 1px solid var(--p-card-border);
@@ -130,4 +151,85 @@ body {
 .palette-pill-copied {
   background: var(--p-copied-bg);
   color: var(--p-copied-text);
+}
+
+/* ---- Themed surfaces for settings/rules panels ---- */
+.surface-card {
+  background: var(--p-card);
+  border: 1px solid var(--p-card-border);
+}
+
+.surface-deep {
+  background: var(--p-card-deep);
+  border: 1px solid var(--p-card-border);
+}
+
+.text-strong {
+  color: var(--p-text);
+}
+
+.text-muted {
+  color: var(--p-muted);
+}
+
+.text-faint {
+  color: var(--p-faint);
+}
+
+.text-accent {
+  color: var(--p-accent);
+}
+
+.text-danger {
+  color: var(--p-danger);
+}
+
+.btn-solid {
+  background: var(--p-btn-bg);
+  color: var(--p-btn-text);
+}
+
+.btn-solid:hover:not(:disabled) {
+  background: var(--p-btn-bg-hover);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--p-btn-border);
+  color: var(--p-text);
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--p-muted);
+}
+
+.btn-outline-danger {
+  background: transparent;
+  border: 1px solid var(--p-btn-border);
+  color: var(--p-muted);
+}
+
+.btn-outline-danger:hover:not(:disabled) {
+  border-color: var(--p-danger);
+  color: var(--p-danger);
+}
+
+.field {
+  background: var(--p-field);
+  border: 1px solid var(--p-field-border);
+  color: var(--p-text);
+}
+
+.field::placeholder {
+  color: var(--p-faint);
+}
+
+.badge {
+  background: var(--p-badge);
+  color: var(--p-badge-text);
+}
+
+.avatar-chip {
+  background: var(--p-badge);
+  color: var(--p-text);
 }

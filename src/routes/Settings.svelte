@@ -1,8 +1,9 @@
 <script lang="ts">
   import { isSchemeRegistered, registerScheme } from "../lib/services/deepLink";
   import { listBrowserProfiles, type BrowserProfile } from "../lib/services/tauri";
-  import { i18n } from "../lib/stores/appState.svelte";
+  import { i18n, theme } from "../lib/stores/appState.svelte";
   import { t, type LocalePref, type MessageKey } from "../lib/i18n";
+  import type { ThemePref } from "../lib/services/tauri";
   import RulesManager from "../lib/components/RulesManager.svelte";
 
   type Status = {
@@ -61,16 +62,21 @@
     const value = (event.currentTarget as HTMLSelectElement).value as LocalePref;
     void i18n.setLocale(value).catch(() => {});
   }
+
+  function onThemeChange(event: Event): void {
+    const value = (event.currentTarget as HTMLSelectElement).value as ThemePref;
+    void theme.setTheme(value).catch(() => {});
+  }
 </script>
 
 <section class="mx-auto w-full max-w-lg space-y-4 px-6 py-16">
-  <h1 class="text-xl font-semibold tracking-tight">{t("settings.title")}</h1>
+  <h1 class="text-xl font-semibold tracking-tight text-strong">{t("settings.title")}</h1>
 
-  <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
-    <h2 class="text-sm font-medium text-zinc-300">{t("settings.languageTitle")}</h2>
-    <p class="mt-1 text-xs text-zinc-500">{t("settings.languageHint")}</p>
+  <div class="surface-card rounded-xl p-5">
+    <h2 class="text-sm font-medium text-strong">{t("settings.languageTitle")}</h2>
+    <p class="mt-1 text-xs text-muted">{t("settings.languageHint")}</p>
     <select
-      class="mt-4 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200"
+      class="field mt-4 w-full rounded-md px-3 py-2 text-sm"
       value={i18n.pref}
       onchange={onLanguageChange}
     >
@@ -80,14 +86,28 @@
     </select>
   </div>
 
-  <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
-    <h2 class="text-sm font-medium text-zinc-300">{t("settings.defaultBrowser")}</h2>
-    <p class="mt-1 text-xs text-zinc-500">{t("settings.defaultHint")}</p>
+  <div class="surface-card rounded-xl p-5">
+    <h2 class="text-sm font-medium text-strong">{t("settings.themeTitle")}</h2>
+    <p class="mt-1 text-xs text-muted">{t("settings.themeHint")}</p>
+    <select
+      class="field mt-4 w-full rounded-md px-3 py-2 text-sm"
+      value={theme.pref}
+      onchange={onThemeChange}
+    >
+      <option value="system">{t("settings.themeOptionSystem")}</option>
+      <option value="light">{t("settings.themeOptionLight")}</option>
+      <option value="dark">{t("settings.themeOptionDark")}</option>
+    </select>
+  </div>
+
+  <div class="surface-card rounded-xl p-5">
+    <h2 class="text-sm font-medium text-strong">{t("settings.defaultBrowser")}</h2>
+    <p class="mt-1 text-xs text-muted">{t("settings.defaultHint")}</p>
 
     <div class="mt-4 flex items-center gap-3">
       <button
         type="button"
-        class="rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white disabled:opacity-50"
+        class="btn-solid rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
         onclick={makeDefault}
         disabled={checking}
       >
@@ -95,51 +115,49 @@
       </button>
       <button
         type="button"
-        class="rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:border-zinc-500 disabled:opacity-50"
+        class="btn-outline rounded-md px-4 py-2 text-sm disabled:opacity-50"
         onclick={refresh}
         disabled={checking}
       >
         {t("settings.check")}
       </button>
     </div>
-    <div class="mt-3 text-xs text-zinc-400">{statusText(httpStatus)}</div>
+    <div class="mt-3 text-xs text-muted">{statusText(httpStatus)}</div>
   </div>
 
-  <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+  <div class="surface-card rounded-xl p-5">
     <RulesManager />
   </div>
 
-  <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+  <div class="surface-card rounded-xl p-5">
     <div class="flex items-center justify-between">
-      <h2 class="text-sm font-medium text-zinc-300">{t("settings.detectedBrowsers")}</h2>
+      <h2 class="text-sm font-medium text-strong">{t("settings.detectedBrowsers")}</h2>
       <button
         type="button"
-        class="rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-300 hover:border-zinc-500"
+        class="btn-outline rounded-md px-3 py-1 text-xs"
         onclick={loadProfiles}
       >
         {t("settings.detect")}
       </button>
     </div>
-    <p class="mt-1 text-xs text-zinc-500">{t("settings.detectedHint")}</p>
+    <p class="mt-1 text-xs text-muted">{t("settings.detectedHint")}</p>
 
     <ul class="mt-4 space-y-2">
       {#each detected as profile (profile.id)}
-        <li class="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
-          <span
-            class="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-zinc-800 text-xs font-semibold text-zinc-300"
-          >
+        <li class="surface-deep flex items-center gap-3 rounded-lg px-3 py-2">
+          <span class="avatar-chip flex h-7 w-7 shrink-0 items-center justify-center rounded text-xs font-semibold">
             {profile.browserName.slice(0, 1).toUpperCase()}
           </span>
           <span class="flex min-w-0 flex-col">
-            <span class="truncate text-sm text-zinc-100">{profile.name}</span>
-            <span class="truncate text-xs text-zinc-500">{profile.executable}</span>
+            <span class="text-strong truncate text-sm">{profile.name}</span>
+            <span class="text-muted truncate text-xs">{profile.executable}</span>
           </span>
-          <span class="ml-auto shrink-0 text-xs text-zinc-500">{profile.id}</span>
+          <span class="text-muted ml-auto shrink-0 text-xs">{profile.id}</span>
         </li>
       {/each}
     </ul>
     {#if detectedStatus}
-      <p class="mt-3 text-xs text-zinc-400">{statusText(detectedStatus)}</p>
+      <p class="text-muted mt-3 text-xs">{statusText(detectedStatus)}</p>
     {/if}
   </div>
 </section>

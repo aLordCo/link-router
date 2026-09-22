@@ -2,13 +2,18 @@
   import { onMount } from "svelte";
   import Prompter from "./routes/Prompter.svelte";
   import Settings from "./routes/Settings.svelte";
-  import { i18n, ui } from "./lib/stores/appState.svelte";
+  import { i18n, theme, ui } from "./lib/stores/appState.svelte";
   import { t } from "./lib/i18n";
   import { watchIncomingUrls } from "./lib/services/incoming";
 
   onMount(() => {
     void i18n.init();
+    theme.start();
     void watchIncomingUrls();
+  });
+
+  $effect(() => {
+    document.documentElement.dataset.theme = theme.value;
   });
 </script>
 

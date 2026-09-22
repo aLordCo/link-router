@@ -130,19 +130,19 @@
 
 <div>
   <div class="flex items-center justify-between">
-    <h2 class="text-sm font-medium text-zinc-300">{t("rules.title")}</h2>
-    <span class="text-xs text-zinc-600">
+    <h2 class="text-strong text-sm font-medium">{t("rules.title")}</h2>
+    <span class="text-faint text-xs">
       {t(rules.length === 1 ? "rules.activeCountOne" : "rules.activeCountOther", {
         n: rules.length,
       })}
     </span>
   </div>
-  <p class="mt-1 text-xs text-zinc-500">
+  <p class="text-muted mt-1 text-xs">
     {t("rules.hint")}
   </p>
 
   <form
-    class="mt-4 space-y-2 rounded-lg border border-zinc-800 bg-zinc-950/60 p-3"
+    class="surface-deep mt-4 space-y-2 rounded-lg p-3"
     onsubmit={(e) => {
       e.preventDefault();
       void add();
@@ -150,7 +150,7 @@
   >
     <div class="flex flex-wrap gap-2">
       <select
-        class="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs text-zinc-200"
+        class="field rounded-md px-2 py-1.5 text-xs"
         bind:value={kind}
       >
         {#each KIND_OPTIONS as option (option.value)}
@@ -159,19 +159,19 @@
       </select>
       <input
         type="text"
-        class="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs text-zinc-200 placeholder-zinc-600"
+        class="field min-w-0 flex-1 rounded-md px-2 py-1.5 text-xs"
         placeholder={kindMeta.placeholder}
         bind:value={pattern}
       />
       <input
         type="number"
         min="0"
-        class="w-16 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs text-zinc-200"
+        class="field w-16 rounded-md px-2 py-1.5 text-xs"
         placeholder="prio"
         bind:value={priority}
       />
       <select
-        class="max-w-[220px] rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs text-zinc-200"
+        class="field max-w-[220px] rounded-md px-2 py-1.5 text-xs"
         bind:value={targetProfileId}
       >
         <option value="" disabled>{t("rules.targetProfilePlaceholder")}</option>
@@ -181,7 +181,7 @@
       </select>
       <button
         type="submit"
-        class="rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-white disabled:opacity-50"
+        class="btn-solid rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-50"
         disabled={busy}
       >
         {busy ? t("rules.saving") : t("rules.add")}
@@ -190,33 +190,31 @@
   </form>
 
   {#if status}
-    <p class="mt-3 text-xs text-red-400">{statusText(status)}</p>
+    <p class="text-danger mt-3 text-xs">{statusText(status)}</p>
   {/if}
 
   <ul class="mt-4 space-y-2">
     {#each rules as rule (rule.id)}
-      <li class="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950/60 px-3 py-2">
-        <span
-          class="shrink-0 rounded bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400"
-        >
+      <li class="surface-deep flex items-center gap-3 rounded-lg px-3 py-2">
+        <span class="badge shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
           {kindLabel(rule)}
         </span>
         <span class="min-w-0 flex-1">
-          <span class="block truncate font-mono text-xs text-zinc-200">{patternOf(rule)}</span>
-          <span class="block truncate text-[11px] text-zinc-500" title={rule.targetProfileId}>
+          <span class="text-strong block truncate font-mono text-xs">{patternOf(rule)}</span>
+          <span class="text-muted block truncate text-[11px]" title={rule.targetProfileId}>
             {rule.targetProfileId} · prio {rule.priority}
           </span>
         </span>
         <button
           type="button"
-          class="rounded-md border border-zinc-700 px-2 py-1 text-[11px] {rule.enabled ? 'text-emerald-400' : 'text-zinc-500'}"
+          class="btn-outline rounded-md px-2 py-1 text-[11px] {rule.enabled ? 'text-accent' : 'text-muted'}"
           onclick={() => toggle(rule)}
         >
           {rule.enabled ? t("rules.active") : t("rules.paused")}
         </button>
         <button
           type="button"
-          class="rounded-md border border-zinc-700 px-2 py-1 text-[11px] text-zinc-400 hover:border-red-700 hover:text-red-400"
+          class="btn-outline-danger rounded-md px-2 py-1 text-[11px]"
           onclick={() => remove(rule.id)}
         >
           {t("rules.delete")}

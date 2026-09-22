@@ -190,7 +190,7 @@
       {#if busy}
         <p class="palette-faint px-5 py-12 text-center text-sm">{t("prompter.evaluating")}</p>
       {:else if error}
-        <p class="px-5 py-12 text-center text-sm text-red-400">{error}</p>
+        <p class="text-danger px-5 py-12 text-center text-sm">{error}</p>
       {:else if showPrompt}
         <div class="max-h-[280px] overflow-y-auto p-2">
           {#each profiles as p, i (p.id)}

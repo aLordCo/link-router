@@ -39,6 +39,11 @@ export const en = {
   "settings.languageOptionSystem": "System",
   "settings.languageOptionEs": "Español",
   "settings.languageOptionEn": "English",
+  "settings.themeTitle": "Theme",
+  "settings.themeHint": "Choose the interface theme. “System” follows the operating system theme.",
+  "settings.themeOptionSystem": "System",
+  "settings.themeOptionLight": "Light",
+  "settings.themeOptionDark": "Dark",
 
   "rules.kindExact": "Exact",
   "rules.kindDomain": "Domain",
