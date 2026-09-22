@@ -69,7 +69,7 @@ impl WindowsBrowserDetector {
             }
         }
 
-        let mut profiles: Vec<BrowserProfile> = by_exe
+        let profiles: Vec<BrowserProfile> = by_exe
             .into_iter()
             .flat_map(|(executable, name)| profiles_for_browser(local, roaming, &executable, &name))
             .collect();

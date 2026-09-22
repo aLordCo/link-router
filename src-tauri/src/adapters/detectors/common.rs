@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+#[cfg(any(target_os = "linux", test))]
 #[derive(Debug, Clone, Default)]
 pub struct DesktopEntry {
     pub name: String,
@@ -9,6 +10,7 @@ pub struct DesktopEntry {
     pub mime_types: String,
 }
 
+#[cfg(any(target_os = "linux", test))]
 impl DesktopEntry {
     pub fn is_browser(&self) -> bool {
         self.categories
@@ -21,6 +23,7 @@ impl DesktopEntry {
     }
 }
 
+#[cfg(any(target_os = "linux", test))]
 pub fn parse_desktop(content: &str) -> Option<DesktopEntry> {
     let mut entry: Option<DesktopEntry> = None;
     let mut in_entry = false;
@@ -68,6 +71,7 @@ pub fn parse_desktop(content: &str) -> Option<DesktopEntry> {
     Some(entry)
 }
 
+#[cfg(any(target_os = "linux", test))]
 pub fn desktop_exec_command(exec: &str) -> Option<String> {
     let mut tokens = exec.split_whitespace();
     let mut first = tokens.next()?;
@@ -89,6 +93,7 @@ pub fn desktop_exec_command(exec: &str) -> Option<String> {
     }
 }
 
+#[cfg(any(target_os = "linux", test))]
 pub fn find_in_paths(name: &str, dirs: &[PathBuf]) -> Option<PathBuf> {
     if name.contains('/') {
         let candidate = PathBuf::from(name);
