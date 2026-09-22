@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS — universal (Intel + Apple Silicon) → un solo .dmg
+          - platform: macos-latest
+            args: '--target universal-apple-darwin'
+            macos-universal: true
+          # Windows → .msi (WiX) + .exe (NSIS)
+          - platform: windows-latest
+            args: ''
+          # Linux → .deb + .rpm + .AppImage
+          - platform: ubuntu-22.04
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            rpm
+
+      # Node.js (coincide con el que usarás tú: v22)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Rust: necesita 1.77.2 mínimo → stable lo cumple; cache compila mucho más rápido
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add macOS universal targets
+        if: matrix.macos-universal
+        run: |
+          rustup target add aarch64-apple-darwin
+          rustup target add x86_64-apple-darwin
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # El core del job: compila el binario + genera el bundle y sube los
+      # instaladores como assets de un release en DRAFT (no se publica solo).
+      - name: Build & release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'LinkRouter ${{ github.ref_name }}'
+          releaseBody: |
+            ## LinkRouter
+
+            Instaladores generados automáticamente desde el tag
+            `${{ github.ref_name }}`.
+
+            Prueba el build y si está todo bien, **publica el draft** desde la
+            página de Releases. Para firmar los instaladores más adelante, define
+            los secrets `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
