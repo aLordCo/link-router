@@ -66,6 +66,16 @@ pub fn run() {
 
             app.manage(adapters::build_app_state(app.handle()));
 
+            // Fuerza el icono de la ventana en Linux; en dev GNOME/la barra de
+            // tareas puede quedarse con el fallback por defecto de Tauri.
+            if let Some(icon) = app.default_window_icon() {
+                if let Some(window) = app.get_webview_window("main") {
+                    window
+                        .set_icon(icon.clone())
+                        .map_err(|e| format!("could not set window icon: {e}"))?;
+                }
+            }
+
             let handle = app.handle().clone();
             app.listen("deep-link://new-url", move |event| {
                 if let Ok(urls) = serde_json::from_str::<Vec<String>>(event.payload()) {
