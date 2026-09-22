@@ -1,6 +1,6 @@
 [package]
 name = "linkrouter"
-version = "0.2.0"
+version = "0.2.1"
 description = "Smart cross-platform router and browser selector (Linux, macOS, Windows)"
 authors = ["LinkRouter Team"]
 edition = "2021"
