@@ -50,7 +50,7 @@ impl WindowsBrowserDetector {
     ) -> Vec<BrowserProfile> {
         let mut by_exe: HashMap<PathBuf, String> = HashMap::new();
 
-        for (_, display, command) in registry_browsers() {
+        for (display, command) in registry_browsers() {
             if let Some(executable) = parse_reg_command(&command) {
                 if executable.is_file() {
                     by_exe.entry(executable).or_insert(display);

@@ -106,6 +106,8 @@ pub fn find_in_paths(name: &str, dirs: &[PathBuf]) -> Option<PathBuf> {
                         continue;
                     }
                 }
+                #[cfg(not(unix))]
+                let _ = metadata;
                 return Some(candidate);
             }
         }
