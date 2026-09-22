@@ -146,6 +146,8 @@ pub fn run() {
             adapters::commands::check_scheme,
             adapters::commands::get_settings,
             adapters::commands::save_settings,
+            adapters::commands::get_config,
+            adapters::commands::save_config,
             adapters::commands::system_locale
         ])
         .run(tauri::generate_context!())

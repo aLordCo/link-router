@@ -2,9 +2,11 @@ use tauri::State;
 use url::Url;
 
 use crate::core::domain::{
-    AppSettings, BrowserProfile, RouteDecision, Rule, RuleEvaluation, RuleMatch, UrlRouteRequest,
+    AppConfig, AppSettings, BrowserProfile, RouteDecision, Rule, RuleEvaluation, RuleMatch,
+    UrlRouteRequest, CONFIG_VERSION,
 };
 use crate::core::error::RouteError;
+use crate::core::route_service::RouteEvaluator;
 use crate::core::rules::RulesEngine;
 use crate::core::sanitizer::sanitize_url;
 
@@ -271,12 +273,7 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, CommandEr
     state.settings.lock().map_err(poisoned).map(|s| s.clone())
 }
 
-#[tauri::command]
-pub fn save_settings(
-    app: tauri::AppHandle,
-    state: State<'_, AppState>,
-    settings: AppSettings,
-) -> Result<(), CommandError> {
+fn validate_settings(settings: &AppSettings) -> Result<(), CommandError> {
     if !matches!(settings.locale.as_str(), "system" | "es" | "en")
         || !matches!(settings.theme.as_str(), "system" | "light" | "dark")
     {
@@ -285,6 +282,77 @@ pub fn save_settings(
             "unsupported locale or theme",
         ));
     }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_config(state: State<'_, AppState>) -> Result<AppConfig, CommandError> {
+    let settings = state.settings.lock().map_err(poisoned)?.clone();
+    let rules = state.rules.lock().map_err(poisoned)?.clone();
+    Ok(AppConfig {
+        version: CONFIG_VERSION,
+        settings,
+        rules: sorted_rules(&rules),
+    })
+}
+
+#[tauri::command]
+pub fn save_config(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    config: AppConfig,
+) -> Result<AppConfig, CommandError> {
+    validate_settings(&config.settings)?;
+
+    let mut seen_ids = std::collections::HashSet::new();
+    for rule in &config.rules {
+        if rule.id.trim().is_empty() {
+            return Err(CommandError::new(
+                "invalid_rule",
+                "rule id cannot be empty",
+            ));
+        }
+        if !seen_ids.insert(rule.id.clone()) {
+            return Err(CommandError::new(
+                "duplicate_rule",
+                format!("rule '{}' appears more than once", rule.id),
+            ));
+        }
+        RulesEngine::validate_rule(rule).map_err(CommandError::from)?;
+    }
+    let evaluator = RouteEvaluator::new(config.rules.clone()).map_err(CommandError::from)?;
+
+    let (previous_settings, previous_rules) = {
+        let mut settings = state.settings.lock().map_err(poisoned)?;
+        let mut rules = state.rules.lock().map_err(poisoned)?;
+        let previous = (settings.clone(), rules.clone());
+        *settings = config.settings.clone();
+        *rules = config.rules.clone();
+        previous
+    };
+
+    if let Err(e) = persist_config(&state) {
+        *state.settings.lock().map_err(poisoned)? = previous_settings;
+        *state.rules.lock().map_err(poisoned)? = previous_rules;
+        return Err(CommandError::new("config_persist_failed", e.to_string()));
+    }
+
+    *state.evaluator.lock().map_err(poisoned)? = evaluator;
+    rebuild_tray(&app, &state)?;
+    Ok(AppConfig {
+        version: CONFIG_VERSION,
+        settings: config.settings,
+        rules: sorted_rules(&config.rules),
+    })
+}
+
+#[tauri::command]
+pub fn save_settings(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    settings: AppSettings,
+) -> Result<(), CommandError> {
+    validate_settings(&settings)?;
 
     let previous = {
         let mut current = state.settings.lock().map_err(poisoned)?;

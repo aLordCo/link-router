@@ -165,6 +165,28 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
   }
 }
 
+export interface AppConfig {
+  version: number;
+  settings: AppSettings;
+  rules: Rule[];
+}
+
+export async function getConfig(): Promise<AppConfig> {
+  try {
+    return await invoke<AppConfig>("get_config");
+  } catch (e) {
+    throw toError(e);
+  }
+}
+
+export async function saveConfig(config: AppConfig): Promise<AppConfig> {
+  try {
+    return await invoke<AppConfig>("save_config", { config });
+  } catch (e) {
+    throw toError(e);
+  }
+}
+
 export async function systemLocale(): Promise<string> {
   try {
     return await invoke<string>("system_locale");
