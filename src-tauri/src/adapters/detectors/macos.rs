@@ -39,9 +39,9 @@ impl MacOsBrowserDetector {
 
         let mut profiles = Vec::new();
 
-        for (_, bundle_name, _) in BUNDLES {
+        for (_, bundle_name, app_bundle) in BUNDLES {
             for dir in applications {
-                let app_dir = dir.join(bundle_name);
+                let app_dir = dir.join(app_bundle);
                 if !app_dir.is_dir() {
                     continue;
                 }
@@ -79,8 +79,14 @@ impl BrowserDetectorPort for MacOsBrowserDetector {
             .map(PathBuf::from)
             .unwrap_or_default();
 
-        let mut applications = vec![PathBuf::from("/Applications")];
-        applications.push(home.join("Applications"));
+        let mut applications = vec![
+            PathBuf::from("/Applications"),
+            PathBuf::from("/Network/Applications"),
+            PathBuf::from("/System/Applications"),
+        ];
+        if !home.as_os_str().is_empty() {
+            applications.push(home.join("Applications"));
+        }
 
         Ok(self.detect_from(&home, &applications))
     }
@@ -227,4 +233,34 @@ fn dedup(profiles: Vec<BrowserProfile>) -> Vec<BrowserProfile> {
         .into_iter()
         .filter(|profile| seen.insert(profile.id.clone()))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn joins_bundle_with_app_suffix() {
+        let root = std::env::temp_dir().join("linkrouter-macos-detector-test");
+        let binary = root.join("Google Chrome.app/Contents/MacOS/Google Chrome");
+        std::fs::create_dir_all(binary.parent().unwrap()).unwrap();
+        std::fs::write(&binary, "").unwrap();
+
+        let detector = MacOsBrowserDetector::new();
+        let found = detector.detect_from(&root, &[root.clone()]);
+
+        assert!(
+            found.iter().any(|profile| profile.id == "macos/google-chrome"),
+            "expected default Chrome profile, got: {found:#?}"
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn scans_extra_application_directories() {
+        let detector = MacOsBrowserDetector::new();
+        let found = detector.detect_from(&PathBuf::from("/nonexistent"), &[]);
+        assert!(found.is_empty());
+    }
 }

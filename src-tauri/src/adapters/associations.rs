@@ -6,6 +6,11 @@ pub fn register_scheme(app: &AppHandle, scheme: &str) -> Result<(), String> {
         linux::register(app, scheme)
     }
 
+    #[cfg(target_os = "macos")]
+    {
+        macos::register(app, scheme)
+    }
+
     #[cfg(windows)]
     {
         use tauri_plugin_deep_link::DeepLinkExt;
@@ -14,7 +19,7 @@ pub fn register_scheme(app: &AppHandle, scheme: &str) -> Result<(), String> {
             .map_err(|e| e.to_string())
     }
 
-    #[cfg(not(any(target_os = "linux", windows)))]
+    #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
     {
         let _ = (app, scheme);
         Err("el registro de esquemas no está soportado en esta plataforma".into())
@@ -27,13 +32,18 @@ pub fn check_scheme(app: &AppHandle, scheme: &str) -> Result<bool, String> {
         linux::check(app, scheme)
     }
 
+    #[cfg(target_os = "macos")]
+    {
+        macos::check(app, scheme)
+    }
+
     #[cfg(windows)]
     {
         use tauri_plugin_deep_link::DeepLinkExt;
         app.deep_link().is_registered(scheme).map_err(|e| e.to_string())
     }
 
-    #[cfg(not(any(target_os = "linux", windows)))]
+    #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
     {
         let _ = (app, scheme);
         Err("el control de esquemas no está soportado en esta plataforma".into())
@@ -293,6 +303,95 @@ mod linux {
             assert!(content.contains(
                 "x-scheme-handler/https=linkrouter-handler.desktop;org.mozilla.firefox.desktop;"
             ));
+        }
+    }
+}
+
+/// macOS declares `http`/`https` as handled schemes at build time through
+/// `tauri.conf.json → plugins.deep-link.schemes`, which the bundler bakes into
+/// the bundle's `Info.plist`. There is no public API to switch the default
+/// browser, so "set as default" re-registers the bundle with LaunchServices and
+/// surfaces the System Settings pane ("Desktop & Dock") where the user picks
+/// LinkRouter. The current state is read back from LaunchServices.
+#[cfg(target_os = "macos")]
+mod macos {
+    use tauri::{AppHandle, Manager};
+
+    const LSREGISTER: &str = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
+    const SETTINGS_PANE: &str =
+        "x-apple.systempreferences:com.apple.Desktop-Settings.extension";
+
+    fn bundle_path() -> Option<std::path::PathBuf> {
+        let exe = tauri::utils::platform::current_exe().ok()?;
+        Some(exe.parent()?.parent()?.parent()?.to_path_buf())
+    }
+
+    pub(super) fn register(_app: &AppHandle, _scheme: &str) -> Result<(), String> {
+        if let Some(bundle) = bundle_path() {
+            let _ = std::process::Command::new(LSREGISTER).arg("-f").arg(bundle).status();
+        }
+
+        std::process::Command::new("open")
+            .arg(SETTINGS_PANE)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("no se pudo abrir Ajustes del Sistema: {e}"))
+    }
+
+    pub(super) fn check(app: &AppHandle, scheme: &str) -> Result<bool, String> {
+        let output = std::process::Command::new("/usr/bin/defaults")
+            .args(["read", "com.apple.LaunchServices/com.apple.launchservices.secure"])
+            .output()
+            .map_err(|e| format!("no se pudo leer LaunchServices: {e}"))?;
+
+        if !output.status.success() {
+            return Ok(false);
+        }
+
+        let bundle_id = app.config().identifier.to_string();
+        let ls_text = String::from_utf8_lossy(&output.stdout);
+        Ok(default_handler(&ls_text, scheme) == Some(bundle_id.as_str()))
+    }
+
+    fn default_handler<'a>(ls_text: &'a str, scheme: &str) -> Option<&'a str> {
+        let key = format!("LSHandlerURLScheme = {scheme};");
+        let base = ls_text.rfind(&key)?;
+        let after = &ls_text[base + key.len()..];
+        let window = match after.find("LSHandlerURLScheme") {
+            Some(end) => &after[..end],
+            None => after,
+        };
+        let at = window.find("LSHandlerRoleAll")?;
+        let rest = window[at + "LSHandlerRoleAll".len()..]
+            .trim()
+            .trim_start_matches('=')
+            .trim();
+        let value = rest.split(';').next()?.trim().trim_matches('"');
+        (!value.is_empty()).then_some(value)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn parses_default_handler_from_launch_services() {
+            let text = "{\n    LSHandlers =     (\n        {\n            LSHandlerURLScheme = https;\n            LSHandlerRoleAll = \"io.linkrouter.desktop\";\n        },\n        {\n            LSHandlerURLScheme = http;\n            LSHandlerRoleAll = com.apple.Safari;\n        }\n    );\n}\n";
+            assert_eq!(
+                default_handler(text, "https"),
+                Some("io.linkrouter.desktop")
+            );
+            assert_eq!(default_handler(text, "http"), Some("com.apple.Safari"));
+            assert_eq!(default_handler(text, "ftp"), None);
+        }
+
+        #[test]
+        fn parses_nested_roles_dictionary() {
+            let text = "{\n            LSHandlerURLScheme = https;\n            LSHandlerRoles =         {\n                LSHandlerRoleAll = \"io.linkrouter.desktop\";\n            };\n        }";
+            assert_eq!(
+                default_handler(text, "https"),
+                Some("io.linkrouter.desktop")
+            );
         }
     }
 }
