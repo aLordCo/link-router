@@ -36,12 +36,42 @@ npm run tauri dev
 # Type-check the frontend
 npm run check        # svelte-check + tsc
 
-# Lint the Windows (Rust) code
+# Lint the Rust code
 (cd src-tauri && cargo check && cargo clippy --all-targets -- -D warnings)
 
-# Production bundle (Linux .deb/.AppImage, macOS .dmg/.app, Windows .msi/.exe)
+# Production bundle (Linux .deb/.rpm/.AppImage, macOS .dmg/.app, Windows .msi/.exe)
 npm run tauri build
 ```
+
+## Configuration file
+
+All rules and settings live in a plain, editable file:
+
+```
+~/.config/link-router/config.json      # $XDG_CONFIG_HOME/link-router/config.json
+```
+
+```jsonc
+{
+  "version": 1,
+  "settings": {
+    "locale": "system",     // "system" | "es" | "en"
+    "theme": "system"       // "system" | "light" | "dark"
+  },
+  "rules": [
+    { "id": "r1", "pattern": { "type": "domain", "pattern": "*.company.com" }, "targetProfileId": "work", "priority": 0, "enabled": true }
+  ]
+}
+```
+
+Notes:
+
+- **Missing file** → app runs with built-in defaults (empty rules, `locale: system`, `theme: system`) and creates the file on the first settings/rules save.
+- **Invalid JSON / wrong schema** → logs a warning and falls back to defaults; it never crashes.
+- **Writes are atomic** (temp file + rename), so a crash never leaves a partial file.
+- **Edit it by hand or with dotfiles sync** → the next launch picks up the change automatically.
+- Legacy config in `~/.config/linkrouter/config.json` (old rule-array format) is migrated automatically on first run.
+- Language (`es`/`en`) and theme (`light`/`dark`/`system`) can also be changed from **Settings**.
 
 ## IPC Map (Rust ⇄ UI)
 
@@ -51,6 +81,9 @@ npm run tauri build
 | `open_in_browser` | UI → Tauri | `{ url, browserId, profileId? }` |
 | `get_rules` / `create_rule` / `update_rule` / `delete_rule` | UI → Tauri | Rule CRUD |
 | `list_browsers` | UI → Tauri | Detected browsers + profiles |
+| `get_config` / `save_config` | UI → Tauri | Full `AppConfig { settings, rules }` (atomic) |
+| `get_settings` / `save_settings` | UI → Tauri | Partial settings sync (locale, theme) |
+| `system_locale` | UI → Tauri | OS locale tag (e.g. `es-AR`, `en-US`) |
 
 ## Specs
 See [`/spec`](./.spec/): Product Vision, Architecture & IPC, Functional Spec, Implementation Roadmap.
