@@ -381,7 +381,7 @@ fn rebuild_tray(app: &tauri::AppHandle, state: &AppState) -> Result<(), CommandE
     let menu = crate::build_tray_menu(app, locale).map_err(|e| {
         CommandError::new("tray_menu_error", format!("could not rebuild tray menu: {e}"))
     })?;
-    let tooltip = crate::tray_labels(locale).3;
+    let tooltip = crate::tray_labels(locale).2;
     if let Some(tray) = state.tray.lock().map_err(poisoned)?.as_ref() {
         tray.set_menu(Some(menu)).map_err(CommandError::from)?;
         tray.set_tooltip(Some(tooltip)).map_err(CommandError::from)?;

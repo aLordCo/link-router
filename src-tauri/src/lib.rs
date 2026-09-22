@@ -15,17 +15,15 @@ pub(crate) fn show_main_window(app: &AppHandle) {
     }
 }
 
-pub(crate) fn tray_labels(locale: &str) -> (&'static str, &'static str, &'static str, &'static str) {
+pub(crate) fn tray_labels(locale: &str) -> (&'static str, &'static str, &'static str) {
     match locale {
         "es" => (
             "Mostrar LinkRouter",
-            "Cerrar",
             "Salir",
             "LinkRouter — selector de navegador",
         ),
         _ => (
             "Show LinkRouter",
-            "Close",
             "Quit",
             "LinkRouter — browser selector",
         ),
@@ -33,11 +31,10 @@ pub(crate) fn tray_labels(locale: &str) -> (&'static str, &'static str, &'static
 }
 
 pub(crate) fn build_tray_menu(app: &AppHandle, locale: &str) -> tauri::Result<Menu<Wry>> {
-    let (show, close, quit, _) = tray_labels(locale);
+    let (show, quit, _) = tray_labels(locale);
     let show_item = MenuItem::with_id(app, "show", show, true, None::<&str>)?;
-    let close_item = MenuItem::with_id(app, "close", close, true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", quit, true, None::<&str>)?;
-    Menu::with_items(app, &[&show_item, &close_item, &quit_item])
+    Menu::with_items(app, &[&show_item, &quit_item])
 }
 
 pub fn run() {
@@ -117,7 +114,7 @@ pub fn run() {
                     .expect("settings lock poisoned at startup"),
             );
             let menu = build_tray_menu(app.handle(), locale)?;
-            let tooltip = tray_labels(locale).3;
+            let tooltip = tray_labels(locale).2;
 
             let tray = TrayIconBuilder::new()
                 .icon(
@@ -130,11 +127,6 @@ pub fn run() {
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "show" => show_main_window(app),
                     "quit" => app.exit(0),
-                    "close" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.hide();
-                        }
-                    }
                     _ => {}
                 })
                 .build(app)
