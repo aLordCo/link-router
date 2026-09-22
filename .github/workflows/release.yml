@@ -76,6 +76,7 @@ jobs:
       # Las notas se extraen de CHANGELOG.md desde la sección "## [versión]".
       - name: Extract release notes
         id: release_notes
+        shell: bash
         run: |
           NOTES="$(awk -v tag="${GITHUB_REF_NAME#v}" '
             /^## \[/ { if (sec) exit; if (index($0, "[" tag "]") > 0) sec = 1; next }
