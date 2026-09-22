@@ -41,8 +41,8 @@
 
 [ System Tray / Lifecycle Manager ]
    ├─► Catch `WindowEvent::CloseRequested` ─► `api.prevent_close()` + `window.hide()`
-   ├─► Left-click / "Show LinkRouter"       ─► `window.show()` + `set_always_on_top(true)` + `set_focus()`
-   └─► "Close" menu item                    ─► `app.exit(0)`
+   ├─► "Show LinkRouter" menu item           ─► `window.unminimize()` + `show()` + `set_focus()`
+   └─► "Quit" menu item (only exit option)   ─► `app.exit(0)`
 ```
 
 ## 2. IPC Channel Map
@@ -54,12 +54,13 @@
 | `get_rules` / `create_rule` / ...      | UI → Tauri      | Rule CRUD (backed by config.json)                   |
 | `list_browsers`                        | UI → Tauri      | Detected browsers + profiles                        |
 | `get_config` (invoke)                  | UI → Tauri      | → `AppConfig { settings, rules }`                   |
-| `save_config` (invoke)                 | UI → Tauri      | `{ settings?, rules? }` → writes config.json (atomic write: tmp + rename) |
+| `save_config` (invoke)                 | UI → Tauri      | Full config (validated) → writes config.json (atomic write: tmp + rename) |
 | `get_settings` (invoke)                | UI → Tauri      | → `{ locale, theme, ... }`                          |
 | `save_settings` (invoke)               | UI → Tauri      | Partial settings update → persists to config.json   |
 | `system_locale` (invoke)               | UI → Tauri      | → OS locale tag (e.g. `es-AR`, `en-US`)             |
-| `config://updated`                     | Tauri → UI      | `AppConfig` (file watcher / after save)             |
-| Tray "show"/"hide" menu events         | OS → Tauri      | `WindowEvent::CloseRequested` intercept             |
+| `config://updated`                     | Tauri → UI      | `AppConfig` (file watcher / after save) — v1.1 optional |
+| Tray menu events ("show" / "quit")     | OS → Tauri      | Show-window / `app.exit(0)`                          |
+| `WindowEvent::CloseRequested`          | OS → Tauri      | intercept → hide window (close-to-tray)             |
 
 ## 3. Config file contract
 
@@ -87,6 +88,9 @@
 - Invalid JSON / schema → log + fall back to defaults; never crash the app.
 - Writes are **atomic** (write to `config.json.tmp`, then rename over `config.json`).
 - `version` field allows future migrations.
+- Legacy v0.1 config at `~/.config/linkrouter/config.json` (plain rule array) is recognized, migrated to the new location/format, and the legacy file removed (first run only).
+
+**Window/tray icon:** window and tray use the same embedded bundle icon set (PNG + `.ico` + `.icns`). On Linux the window sets its icon at startup and is excluded from the taskbar via `skip-taskbar` (the app runs under the X11/XWayland backend, because native Wayland has no skip-taskbar hint and Mutter ignores it); the tray-carrying strings are rebuilt when the locale changes.
 
 ## 4. Frontend state (Svelte 5 Runes)
 

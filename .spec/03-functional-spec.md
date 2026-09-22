@@ -42,10 +42,11 @@
 - **AND** the app shows a notification-area icon (System Tray) next to the system clock.
 - **WHEN** the user clicks a link from an external app and no automatic rule matches,
 - **THEN** the LinkRouter window is brought to the foreground above all other active apps (`set_always_on_top(true)`, `show()`, `set_focus()`).
-- **WHEN** the user left-clicks the tray icon or selects "Show LinkRouter" in the context menu,
-- **THEN** the main window is restored and focused on screen (`show()` and `set_focus()`).
-- **WHEN** the user selects "Close" from the tray context menu,
+- **WHEN** the user selects "Show LinkRouter" in the tray context menu,
+- **THEN** the main window is restored and focused on screen (`unminimize()`, `show()`, `set_focus()`).
+- **WHEN** the user selects **"Quit"** from the tray context menu — the **only** exit option (there is no separate "Close"/hide item),
 - **THEN** the app exits cleanly (`app.exit(0)`).
+- **AND** the main window is excluded from the OS taskbar (Linux: X11/XWayland backend + `skip-taskbar`, since native Wayland drops the hint), so LinkRouter surfaces through the system tray only; closing the window (X button / `Esc`) only hides it.
 
 ---
 
@@ -67,9 +68,10 @@
 - **Non-functional:** locale dictionaries live in `src/lib/i18n/{en,es}.ts`; adding a new locale must not require code changes outside the dictionary file + a registry entry (open/closed for new languages).
 
 ### Matching / UX scenarios
-1. Default → system Spanish → all labels in Spanish (`Abrir en…`, `Configuración`, `Cerrar`).
+1. Default → system Spanish → all labels in Spanish (`Abrir en…`, `Configuración`, `Salir`).
 2. Explicit English override → UI in English even if the OS is Spanish.
 3. Unsupported system locale → English.
+4. Spanish string quality → neutral Latin American (Colombian reference): `tú` forms, no voseo (`Configura`, `Completa`, `elige`), terms like `parámetros de seguimiento`.
 
 ---
 
@@ -105,6 +107,12 @@
 - **GIVEN** that the file is edited externally (e.g. by hand or by a dotfiles sync),
 - **WHEN** LinkRouter is running,
 - **THEN** (v1) the next launch picks up the changes; (v1.1, optional) a file watcher emits `config://updated` and the UI refreshes live.
+- **GIVEN** that a legacy v0.1 config exists at `~/.config/linkrouter/config.json`,
+- **WHEN** LinkRouter starts and no modern config exists yet,
+- **THEN** the legacy rules are migrated to `~/.config/link-router/config.json`, and the legacy file is deleted.
+- **GIVEN** an external tool or script needs the whole configuration,
+- **WHEN** it invokes `get_config`/`save_config`,
+- **THEN** it receives/commits the full `AppConfig { settings, rules }`, with the same validation (locale/theme values, unique rule ids, valid patterns) and atomic write guarantees as the UI.
 - **Non-functional:** the file path is exactly `~/.config/link-router/config.json` (XDG), UTF-8, pretty-printed JSON with `version` for forward migrations.
 
 ### Scenario table
@@ -116,3 +124,4 @@
 | 4 | User adds a rule in UI | `config.json` updated atomically; rule active immediately |
 | 5 | Hand-edited `locale: "es"` | Next launch renders UI in Spanish |
 | 6 | Hand-edited `theme: "dark"` | Next launch renders dark theme |
+| 7 | Legacy `linkrouter/config.json` exists | Migrated to `link-router/`, legacy file deleted |
