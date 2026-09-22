@@ -1,3 +1,6 @@
+<img width="1158" height="512" alt="link-router-banner" src="https://github.com/user-attachments/assets/24ef99f1-854a-4064-a370-c1373e0dfffb" />
+
+
 # LinkRouter
 
 Smart deep-link router & browser-selector prompter. A fast, lightweight, cross-platform (Linux, macOS, Windows) desktop app built with **Tauri 2** + **Svelte 5** (SvelteKit) + **Rust**.
