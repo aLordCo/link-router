@@ -43,6 +43,48 @@ npm run check        # svelte-check + tsc
 npm run tauri build
 ```
 
+## Installing unsigned builds
+
+Releases are **not signed or notarized** yet, so macOS Gatekeeper / Windows
+SmartScreen will warn. Bypass it once after install (the app is then good):
+
+### macOS
+
+The `.dmg` is not notarized, so double-clicking shows *“Apple could not
+verify LinkRouter.app is free of malware”*. Any of these works:
+
+```bash
+# Mount the .dmg and drag LinkRouter.app to /Applications, then clear the
+# quarantine flag (one-liner, no gatekeeper disabled):
+xattr -dr com.apple.quarantine "/Applications/LinkRouter.app"
+open "/Applications/LinkRouter.app"
+```
+
+### Windows
+
+The MSI/EXE is not code-signed, so you get the *“Windows protected your PC”*
+SmartScreen block. Click **More info → Run anyway** (once per install). For
+silent installs:
+
+```powershell
+# Normalize the SmartScreen marking for this file
+Unblock-File .\LinkRouter_0.2.1_x64_en-US.msi
+```
+
+### Linux
+
+`.deb`/`.rpm` install fine; just run the AppImage after granting execute
+permission:
+
+```bash
+chmod +x LinkRouter_*.AppImage
+./LinkRouter_*.AppImage
+```
+
+> Signing/notarization is planned for a later release (secrets
+> `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` on the
+> CI and an Apple Developer ID / Windows code-signing cert).
+
 ## Configuration file
 
 All rules and settings live in a plain, editable file:
