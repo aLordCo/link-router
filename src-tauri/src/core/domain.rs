@@ -14,6 +14,59 @@ pub struct BrowserProfile {
     pub args: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppSettings {
+    #[serde(default = "default_locale")]
+    pub locale: String,
+    #[serde(default = "default_theme")]
+    pub theme: String,
+}
+
+fn default_locale() -> String {
+    "system".into()
+}
+
+fn default_theme() -> String {
+    "system".into()
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            locale: default_locale(),
+            theme: default_theme(),
+        }
+    }
+}
+
+pub const CONFIG_VERSION: u32 = 1;
+
+fn config_version() -> u32 {
+    CONFIG_VERSION
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppConfig {
+    #[serde(default = "config_version")]
+    pub version: u32,
+    #[serde(default)]
+    pub settings: AppSettings,
+    #[serde(default)]
+    pub rules: Vec<Rule>,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            version: CONFIG_VERSION,
+            settings: AppSettings::default(),
+            rules: Vec::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct UrlRouteRequest {
     pub url: Url,

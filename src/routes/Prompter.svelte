@@ -4,6 +4,7 @@
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { appState } from "../lib/stores/appState.svelte";
   import { openInDefaultBrowser } from "../lib/services/tauri";
+  import { t } from "../lib/i18n";
   import { describeUrl, isSanitized } from "../lib/utils/url";
   import BrowserOption from "../lib/components/BrowserOption.svelte";
 
@@ -142,7 +143,7 @@
   <div class="flex flex-1 items-center justify-center px-6 py-8">
     <div
       role="listbox"
-      aria-label="Selector de navegadores"
+      aria-label={t("prompter.ariaLabel")}
       aria-activedescendant={showPrompt ? `profile-opt-${selectedIndex}` : undefined}
       tabindex="-1"
       bind:this={container}
@@ -166,14 +167,14 @@
         {:else if rawUrl}
           <div class="palette-muted min-w-0 flex-1 truncate text-sm">{rawUrl}</div>
         {:else}
-          <div class="palette-faint flex-1 text-xs uppercase tracking-wider">URL entrante</div>
+          <div class="palette-faint flex-1 text-xs uppercase tracking-wider">{t("prompter.incomingUrl")}</div>
         {/if}
         {#if sanitized}
           <span
             class="palette-pill shrink-0"
-            title="Se removieron parámetros de rastreo (utm_*, fbclid, …)"
+            title={t("prompter.sanitizedTitle")}
           >
-            limpiada
+            {t("prompter.sanitizedPill")}
           </span>
         {/if}
         {#if copied}
@@ -181,13 +182,13 @@
             class="palette-pill palette-pill-copied shrink-0"
             transition:fly={{ y: 4, duration: 70 }}
           >
-            ¡Copiado!
+            {t("prompter.copied")}
           </span>
         {/if}
       </header>
 
       {#if busy}
-        <p class="palette-faint px-5 py-12 text-center text-sm">Evaluando…</p>
+        <p class="palette-faint px-5 py-12 text-center text-sm">{t("prompter.evaluating")}</p>
       {:else if error}
         <p class="px-5 py-12 text-center text-sm text-red-400">{error}</p>
       {:else if showPrompt}
@@ -203,23 +204,19 @@
           {/each}
         </div>
       {:else if decision?.type === "launch"}
-        <p class="palette-muted px-5 py-12 text-center text-sm">
-          Regla automática → perfil <span class="font-mono">{decision.profileId}</span>. La URL se
-          abre directamente.
-        </p>
+        <p class="palette-muted px-5 py-12 text-center text-sm">{t("prompter.autoRulePrefix")}<span class="font-mono">{decision.profileId}</span>{t("prompter.autoRuleSuffix")}</p>
       {:else if decision?.type === "none"}
         <p class="palette-muted px-5 py-12 text-center text-sm">
-          Sin regla y sin navegadores detectados.
+          {t("prompter.noRuleNoBrowsers")}
         </p>
       {:else}
         <div class="flex flex-col items-center gap-4 px-5 py-12">
           <div class="flex flex-col items-center gap-2">
             <p class="palette-faint text-center text-xs uppercase tracking-wider">
-              Estado: esperando un enlace
+              {t("prompter.statusWaiting")}
             </p>
             <p class="palette-muted max-w-md text-center text-sm leading-relaxed">
-              LinkRouter intercepta los enlaces <code class="font-mono">http/https</code>. Cuando un
-              enlace no tiene regla, se abre aquí para elegir el navegador.
+              {@html t("prompter.intro")}
             </p>
           </div>
           <button
@@ -228,11 +225,10 @@
             style="background: var(--p-item-hover)"
             onclick={onTest}
           >
-            Probar con una URL de ejemplo
+            {t("prompter.trySample")}
           </button>
           <p class="palette-faint max-w-md text-center text-xs leading-relaxed">
-            Configurá reglas en «Configuración»: por dominio, ruta o parámetros de rastreo. Con
-            «Prompter» en la barra superior volvés acá cuando quieras.
+            {t("prompter.setupHint")}
           </p>
         </div>
       {/if}
@@ -242,10 +238,12 @@
         style="border-color: var(--p-card-border)"
       >
         <span class="palette-faint text-[11px]">
-          Enter&nbsp;abrir&ensp;·&ensp;⇧Enter&nbsp;predet.&ensp;·&ensp;⌘C&nbsp;copiar&ensp;·&ensp;Esc&nbsp;cerrar
+          {t("prompter.footerKeys")}
         </span>
         <span class="palette-faint shrink-0 text-[11px]">
-          {profiles.length} perfil{profiles.length === 1 ? "" : "es"}
+          {t(profiles.length === 1 ? "prompter.profile.one" : "prompter.profile.other", {
+            n: profiles.length,
+          })}
         </span>
       </footer>
     </div>

@@ -2,13 +2,13 @@ use tauri::State;
 use url::Url;
 
 use crate::core::domain::{
-    BrowserProfile, RouteDecision, Rule, RuleEvaluation, RuleMatch, UrlRouteRequest,
+    AppSettings, BrowserProfile, RouteDecision, Rule, RuleEvaluation, RuleMatch, UrlRouteRequest,
 };
 use crate::core::error::RouteError;
 use crate::core::rules::RulesEngine;
 use crate::core::sanitizer::sanitize_url;
 
-use super::{commit_rules, AppState};
+use super::{commit_rules, effective_locale, persist_config, AppState};
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -47,6 +47,12 @@ impl From<String> for CommandError {
 impl From<Box<dyn std::error::Error + Send + Sync>> for CommandError {
     fn from(e: Box<dyn std::error::Error + Send + Sync>) -> Self {
         Self::new("adapter_error", e.to_string())
+    }
+}
+
+impl From<tauri::Error> for CommandError {
+    fn from(e: tauri::Error) -> Self {
+        Self::new("tauri_error", e.to_string())
     }
 }
 
@@ -258,4 +264,59 @@ pub fn register_scheme(app: tauri::AppHandle, scheme: String) -> Result<(), Comm
 #[tauri::command]
 pub fn check_scheme(app: tauri::AppHandle, scheme: String) -> Result<bool, CommandError> {
     super::associations::check_scheme(&app, &scheme).map_err(CommandError::from)
+}
+
+#[tauri::command]
+pub fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, CommandError> {
+    state.settings.lock().map_err(poisoned).map(|s| s.clone())
+}
+
+#[tauri::command]
+pub fn save_settings(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    settings: AppSettings,
+) -> Result<(), CommandError> {
+    if !matches!(settings.locale.as_str(), "system" | "es" | "en")
+        || !matches!(settings.theme.as_str(), "system" | "light" | "dark")
+    {
+        return Err(CommandError::new(
+            "invalid_settings",
+            "unsupported locale or theme",
+        ));
+    }
+
+    let previous = {
+        let mut current = state.settings.lock().map_err(poisoned)?;
+        let previous = current.clone();
+        *current = settings.clone();
+        previous
+    };
+
+    if let Err(e) = persist_config(&state) {
+        *state.settings.lock().map_err(poisoned)? = previous;
+        return Err(CommandError::new("settings_persist_failed", e.to_string()));
+    }
+
+    rebuild_tray(&app, &state)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn system_locale() -> String {
+    sys_locale::get_locale().unwrap_or_else(|| String::from("en"))
+}
+
+fn rebuild_tray(app: &tauri::AppHandle, state: &AppState) -> Result<(), CommandError> {
+    let settings = state.settings.lock().map_err(poisoned)?;
+    let locale = effective_locale(&settings);
+    let menu = crate::build_tray_menu(app, locale).map_err(|e| {
+        CommandError::new("tray_menu_error", format!("could not rebuild tray menu: {e}"))
+    })?;
+    let tooltip = crate::tray_labels(locale).3;
+    if let Some(tray) = state.tray.lock().map_err(poisoned)?.as_ref() {
+        tray.set_menu(Some(menu)).map_err(CommandError::from)?;
+        tray.set_tooltip(Some(tooltip)).map_err(CommandError::from)?;
+    }
+    Ok(())
 }

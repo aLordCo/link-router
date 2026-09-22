@@ -11,18 +11,33 @@
     type RulePattern,
     type RulePatternKind,
   } from "../services/tauri";
+  import { t, type MessageKey } from "../i18n";
 
-  const KIND_OPTIONS: { value: RulePatternKind; label: string; placeholder: string }[] = [
-    { value: "exact", label: "Exacta", placeholder: "github.com o https://github.com/x" },
-    { value: "domain", label: "Dominio", placeholder: "github.com o *.github.com" },
-    { value: "regex", label: "Regex", placeholder: "^https://.*\\\\.notion\\\\.site/.+" },
-    { value: "path", label: "Prefijo de ruta", placeholder: "https://meet.google.com/*" },
-    { value: "sourceApp", label: "App origen", placeholder: "Slack" },
+  const KIND_OPTIONS: {
+    value: RulePatternKind;
+    labelKey: MessageKey;
+    placeholder: string;
+  }[] = [
+    { value: "exact", labelKey: "rules.kindExact", placeholder: "github.com o https://github.com/x" },
+    { value: "domain", labelKey: "rules.kindDomain", placeholder: "github.com o *.github.com" },
+    { value: "regex", labelKey: "rules.kindRegex", placeholder: "^https://.*\\\\.notion\\\\.site/.+" },
+    { value: "path", labelKey: "rules.kindPath", placeholder: "https://meet.google.com/*" },
+    { value: "sourceApp", labelKey: "rules.kindSourceApp", placeholder: "Slack" },
   ];
+
+  type Status = {
+    key: MessageKey;
+    vars?: Record<string, string>;
+  };
+
+  function statusText(status: Status | null): string {
+    if (!status) return "";
+    return status.vars ? t(status.key, status.vars) : t(status.key);
+  }
 
   let rules = $state<Rule[]>([]);
   let profiles = $state<BrowserProfile[]>([]);
-  let status = $state<string | null>(null);
+  let status = $state<Status | null>(null);
   let busy = $state(false);
 
   let kind = $state<RulePatternKind>("domain");
@@ -43,7 +58,7 @@
         targetProfileId = "";
       }
     } catch (e) {
-      status = `Error: ${String(e)}`;
+      status = { key: "common.error", vars: { e: String(e) } };
     }
   }
 
@@ -60,7 +75,7 @@
   async function add(): Promise<void> {
     const built = buildPattern();
     if (!built || !targetProfileId) {
-      status = "Completá el patrón y elegí un perfil destino.";
+      status = { key: "rules.createError" };
       return;
     }
     busy = true;
@@ -77,7 +92,7 @@
       pattern = "";
       await refresh();
     } catch (e) {
-      status = `Error al crear la regla: ${String(e)}`;
+      status = { key: "rules.createRuleError", vars: { e: String(e) } };
     } finally {
       busy = false;
     }
@@ -89,7 +104,7 @@
       await updateRule({ ...rule, enabled: !rule.enabled });
       await refresh();
     } catch (e) {
-      status = `Error: ${String(e)}`;
+      status = { key: "common.error", vars: { e: String(e) } };
     }
   }
 
@@ -99,13 +114,13 @@
       await deleteRule(id);
       await refresh();
     } catch (e) {
-      status = `Error: ${String(e)}`;
+      status = { key: "common.error", vars: { e: String(e) } };
     }
   }
 
   function kindLabel(rule: Rule): string {
-    return KIND_OPTIONS.find((option) => option.value === rule.pattern.kind)?.label ??
-      rule.pattern.kind;
+    const option = KIND_OPTIONS.find((option) => option.value === rule.pattern.kind);
+    return option ? t(option.labelKey) : rule.pattern.kind;
   }
 
   function patternOf(rule: Rule): string {
@@ -115,11 +130,15 @@
 
 <div>
   <div class="flex items-center justify-between">
-    <h2 class="text-sm font-medium text-zinc-300">Reglas de enrutamiento</h2>
-    <span class="text-xs text-zinc-600">{rules.length} activa{rules.length === 1 ? "" : "s"}</span>
+    <h2 class="text-sm font-medium text-zinc-300">{t("rules.title")}</h2>
+    <span class="text-xs text-zinc-600">
+      {t(rules.length === 1 ? "rules.activeCountOne" : "rules.activeCountOther", {
+        n: rules.length,
+      })}
+    </span>
   </div>
   <p class="mt-1 text-xs text-zinc-500">
-    Una regla mapea una URL a un perfil sin pedir confirmación. Menor número = mayor prioridad.
+    {t("rules.hint")}
   </p>
 
   <form
@@ -135,7 +154,7 @@
         bind:value={kind}
       >
         {#each KIND_OPTIONS as option (option.value)}
-          <option value={option.value}>{option.label}</option>
+          <option value={option.value}>{t(option.labelKey)}</option>
         {/each}
       </select>
       <input
@@ -155,7 +174,7 @@
         class="max-w-[220px] rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs text-zinc-200"
         bind:value={targetProfileId}
       >
-        <option value="" disabled>Perfil destino…</option>
+        <option value="" disabled>{t("rules.targetProfilePlaceholder")}</option>
         {#each profiles as profile (profile.id)}
           <option value={profile.id}>{profile.name}</option>
         {/each}
@@ -165,13 +184,13 @@
         class="rounded-md bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-white disabled:opacity-50"
         disabled={busy}
       >
-        {busy ? "Guardando…" : "Agregar"}
+        {busy ? t("rules.saving") : t("rules.add")}
       </button>
     </div>
   </form>
 
   {#if status}
-    <p class="mt-3 text-xs text-red-400">{status}</p>
+    <p class="mt-3 text-xs text-red-400">{statusText(status)}</p>
   {/if}
 
   <ul class="mt-4 space-y-2">
@@ -193,14 +212,14 @@
           class="rounded-md border border-zinc-700 px-2 py-1 text-[11px] {rule.enabled ? 'text-emerald-400' : 'text-zinc-500'}"
           onclick={() => toggle(rule)}
         >
-          {rule.enabled ? "activa" : "pausada"}
+          {rule.enabled ? t("rules.active") : t("rules.paused")}
         </button>
         <button
           type="button"
           class="rounded-md border border-zinc-700 px-2 py-1 text-[11px] text-zinc-400 hover:border-red-700 hover:text-red-400"
           onclick={() => remove(rule.id)}
         >
-          eliminar
+          {t("rules.delete")}
         </button>
       </li>
     {/each}

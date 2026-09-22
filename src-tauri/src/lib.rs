@@ -2,10 +2,43 @@ mod adapters;
 mod core;
 mod ports;
 
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{Listener, Manager, WindowEvent};
+use tauri::{AppHandle, Listener, Manager, Wry, WindowEvent};
 use tauri_plugin_deep_link::DeepLinkExt;
+
+pub(crate) fn show_main_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+pub(crate) fn tray_labels(locale: &str) -> (&'static str, &'static str, &'static str, &'static str) {
+    match locale {
+        "es" => (
+            "Mostrar LinkRouter",
+            "Cerrar",
+            "Salir",
+            "LinkRouter — selector de navegador",
+        ),
+        _ => (
+            "Show LinkRouter",
+            "Close",
+            "Quit",
+            "LinkRouter — browser selector",
+        ),
+    }
+}
+
+pub(crate) fn build_tray_menu(app: &AppHandle, locale: &str) -> tauri::Result<Menu<Wry>> {
+    let (show, close, quit, _) = tray_labels(locale);
+    let show_item = MenuItem::with_id(app, "show", show, true, None::<&str>)?;
+    let close_item = MenuItem::with_id(app, "close", close, true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, "quit", quit, true, None::<&str>)?;
+    Menu::with_items(app, &[&show_item, &close_item, &quit_item])
+}
 
 pub fn run() {
     env_logger::init();
@@ -15,7 +48,10 @@ pub fn run() {
             if let Some(url) = adapters::dispatcher::extract_url_arg(&args) {
                 if let Err(e) = adapters::dispatcher::handle_incoming_url(app, &url, None) {
                     log::warn!("could not dispatch url from second instance: {e}");
+                    show_main_window(app);
                 }
+            } else {
+                show_main_window(app);
             }
         }))
         .plugin(tauri_plugin_deep_link::init())
@@ -53,30 +89,28 @@ pub fn run() {
                 }
             }
 
-            // Bandeja: menú contextual Mostrar/Cerrar/Salir
-            let show_item =
-                MenuItem::with_id(app, "show", "Mostrar LinkRouter", true, None::<&str>)?;
-            let close_item =
-                MenuItem::with_id(app, "close", "Cerrar", true, None::<&str>)?;
-            let quit_item = PredefinedMenuItem::quit(app, Some("Salir"))?;
-            let menu = Menu::with_items(app, &[&show_item, &close_item, &quit_item])?;
+            // Bandeja: menú contextual Mostrar/Cerrar/Salir en el idioma efectivo
+            let state = app.state::<adapters::AppState>();
+            let locale = adapters::effective_locale(
+                &state
+                    .settings
+                    .lock()
+                    .expect("settings lock poisoned at startup"),
+            );
+            let menu = build_tray_menu(app.handle(), locale)?;
+            let tooltip = tray_labels(locale).3;
 
-            let _tray = TrayIconBuilder::new()
+            let tray = TrayIconBuilder::new()
                 .icon(
                     app.default_window_icon()
                         .cloned()
                         .expect("missing default window icon for tray"),
                 )
-                .tooltip("LinkRouter — selector de navegador")
+                .tooltip(tooltip)
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id().as_ref() {
-                    "show" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.unminimize();
-                            let _ = window.set_focus();
-                        }
-                    }
+                    "show" => show_main_window(app),
+                    "quit" => app.exit(0),
                     "close" => {
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.hide();
@@ -86,6 +120,8 @@ pub fn run() {
                 })
                 .build(app)
                 .map_err(|e| format!("could not build tray: {e}"))?;
+
+            *state.tray.lock().expect("tray lock poisoned") = Some(tray);
 
             Ok(())
         })
@@ -107,7 +143,10 @@ pub fn run() {
             adapters::commands::list_browser_profiles,
             adapters::commands::set_default_browser,
             adapters::commands::register_scheme,
-            adapters::commands::check_scheme
+            adapters::commands::check_scheme,
+            adapters::commands::get_settings,
+            adapters::commands::save_settings,
+            adapters::commands::system_locale
         ])
         .run(tauri::generate_context!())
         .expect("error while running LinkRouter");

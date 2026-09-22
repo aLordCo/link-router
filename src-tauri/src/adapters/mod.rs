@@ -8,9 +8,10 @@ pub mod persistence;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use tauri::AppHandle;
+use tauri::tray::TrayIcon;
+use tauri::{AppHandle, Wry};
 
-use crate::core::domain::Rule;
+use crate::core::domain::{AppConfig, AppSettings, CONFIG_VERSION, Rule};
 use crate::core::error::RouteError;
 use crate::core::route_service::RouteEvaluator;
 use crate::ports::{BrowserDetectorPort, ConfigRepositoryPort, UrlLauncherPort};
@@ -19,8 +20,11 @@ pub struct AppState {
     pub detector: Box<dyn BrowserDetectorPort>,
     pub launcher: Box<dyn UrlLauncherPort>,
     pub repository: Box<dyn ConfigRepositoryPort>,
+    pub settings: Mutex<AppSettings>,
     pub rules: Mutex<Vec<Rule>>,
     pub evaluator: Mutex<RouteEvaluator>,
+    pub config_io: Mutex<()>,
+    pub tray: Mutex<Option<TrayIcon<Wry>>>,
     pub last_url: Mutex<Option<(String, Instant)>>,
 }
 
@@ -45,12 +49,12 @@ fn poisoned() -> RouteError {
     RouteError::RuleEngine("internal state lock poisoned".into())
 }
 
-fn initial_rules(repository: &dyn ConfigRepositoryPort) -> Vec<Rule> {
-    match repository.load_rules() {
-        Ok(rules) => rules,
+fn initial_config(repository: &dyn ConfigRepositoryPort) -> AppConfig {
+    match repository.load_config() {
+        Ok(config) => config,
         Err(e) => {
-            log::warn!("could not load rules from repository: {e}");
-            Vec::new()
+            log::warn!("invalid config file, using defaults: {e}");
+            AppConfig::default()
         }
     }
 }
@@ -67,27 +71,46 @@ fn initial_evaluator(rules: Vec<Rule>) -> RouteEvaluator {
 
 pub fn build_app_state(_handle: &AppHandle) -> AppState {
     let repository = persistence::JsonConfigRepository::new();
-    let rules = initial_rules(&repository);
+    let config = initial_config(&repository);
+    let rules = config.rules;
     let evaluator = initial_evaluator(rules.clone());
 
     AppState {
         detector: Box::new(detectors::system_detector()),
         launcher: Box::new(launchers::ProcessLauncher::new()),
         repository: Box::new(repository),
+        settings: Mutex::new(config.settings),
         rules: Mutex::new(rules),
         evaluator: Mutex::new(evaluator),
+        config_io: Mutex::new(()),
+        tray: Mutex::new(None),
         last_url: Mutex::new(None),
+    }
+}
+
+pub(crate) fn effective_locale(settings: &AppSettings) -> &'static str {
+    match settings.locale.as_str() {
+        "es" => "es",
+        "en" => "en",
+        _ => {
+            let tag = sys_locale::get_locale().unwrap_or_else(|| String::from("en"));
+            if tag.starts_with("es") {
+                "es"
+            } else {
+                "en"
+            }
+        }
     }
 }
 
 #[allow(dead_code)]
 pub fn reload_rules(state: &AppState) -> Result<(), RouteError> {
-    let rules = state
+    let config = state
         .repository
-        .load_rules()
+        .load_config()
         .map_err(|e| RouteError::RuleEngine(e.to_string()))?;
-    *state.rules.lock().map_err(|_| poisoned())? = rules.clone();
-    let evaluator = initial_evaluator(rules);
+    *state.rules.lock().map_err(|_| poisoned())? = config.rules.clone();
+    let evaluator = initial_evaluator(config.rules);
     *state.evaluator.lock().map_err(|_| poisoned())? = evaluator;
     Ok(())
 }
@@ -95,10 +118,22 @@ pub fn reload_rules(state: &AppState) -> Result<(), RouteError> {
 pub fn commit_rules(state: &AppState) -> Result<(), RouteError> {
     let rules = state.rules.lock().map_err(|_| poisoned())?.clone();
     let evaluator = RouteEvaluator::new(rules.clone())?;
-    state
-        .repository
-        .save_rules(&rules)
-        .map_err(|e| RouteError::RuleEngine(e.to_string()))?;
+    persist_config(state)?;
     *state.evaluator.lock().map_err(|_| poisoned())? = evaluator;
     Ok(())
+}
+
+pub fn persist_config(state: &AppState) -> Result<(), RouteError> {
+    let _io = state.config_io.lock().map_err(|_| poisoned())?;
+    let rules = state.rules.lock().map_err(|_| poisoned())?.clone();
+    let settings = state.settings.lock().map_err(|_| poisoned())?.clone();
+    let config = AppConfig {
+        version: CONFIG_VERSION,
+        settings,
+        rules,
+    };
+    state
+        .repository
+        .save_config(&config)
+        .map_err(|e| RouteError::RuleEngine(e.to_string()))
 }

@@ -1,4 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { LocalePref } from "../i18n/locales";
+
+export type ThemePref = "system" | "light" | "dark";
+
+export type AppSettings = {
+  locale: LocalePref;
+  theme: ThemePref;
+};
 
 export type BrowserProfile = {
   id: string;
@@ -136,6 +144,30 @@ export async function updateRule(rule: Rule): Promise<Rule> {
 export async function deleteRule(ruleId: string): Promise<void> {
   try {
     await invoke("delete_rule", { ruleId });
+  } catch (e) {
+    throw toError(e);
+  }
+}
+
+export async function getSettings(): Promise<AppSettings> {
+  try {
+    return await invoke<AppSettings>("get_settings");
+  } catch (e) {
+    throw toError(e);
+  }
+}
+
+export async function saveSettings(settings: AppSettings): Promise<void> {
+  try {
+    await invoke("save_settings", { settings });
+  } catch (e) {
+    throw toError(e);
+  }
+}
+
+export async function systemLocale(): Promise<string> {
+  try {
+    return await invoke<string>("system_locale");
   } catch (e) {
     throw toError(e);
   }

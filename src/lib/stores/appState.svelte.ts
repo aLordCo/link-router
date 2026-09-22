@@ -1,15 +1,56 @@
 import {
   evaluateUrlRoute,
+  getSettings,
   openInBrowser,
+  saveSettings,
+  systemLocale,
+  type AppSettings,
   type BrowserProfile,
   type RouteDecision,
   type RouteError,
 } from "../services/tauri";
+import { resolveLocale, type Locale, type LocalePref } from "../i18n/locales";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export type Page = "prompter" | "settings";
 
 export const ui = $state({ page: "settings" as Page });
+
+export const settings = $state<AppSettings>({ locale: "system", theme: "system" });
+export const localeState = $state({ systemTag: navigator.language });
+
+export const i18n = {
+  get pref(): LocalePref {
+    return settings.locale;
+  },
+  get locale(): Locale {
+    return resolveLocale(settings.locale, localeState.systemTag);
+  },
+  async init(): Promise<void> {
+    try {
+      const loaded = await getSettings();
+      settings.locale = loaded.locale;
+      settings.theme = loaded.theme;
+    } catch {
+      // defaultes (system/system) keep working in-memory
+    }
+    try {
+      localeState.systemTag = await systemLocale();
+    } catch {
+      // fall back to navigator.language
+    }
+  },
+  async setLocale(pref: LocalePref): Promise<void> {
+    const previous = settings.locale;
+    settings.locale = pref;
+    try {
+      await saveSettings({ locale: pref, theme: settings.theme });
+    } catch (e) {
+      settings.locale = previous;
+      throw e;
+    }
+  },
+};
 
 function messageOf(e: unknown): string {
   if (e && typeof e === "object") {

@@ -2,10 +2,12 @@
   import { onMount } from "svelte";
   import Prompter from "./routes/Prompter.svelte";
   import Settings from "./routes/Settings.svelte";
-  import { ui } from "./lib/stores/appState.svelte";
+  import { i18n, ui } from "./lib/stores/appState.svelte";
+  import { t } from "./lib/i18n";
   import { watchIncomingUrls } from "./lib/services/incoming";
 
   onMount(() => {
+    void i18n.init();
     void watchIncomingUrls();
   });
 </script>
@@ -36,14 +38,14 @@
         class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors {ui.page === 'prompter' ? 'palette-item-selected' : 'palette-muted hover:text-[var(--p-text)]'}"
         onclick={() => (ui.page = "prompter")}
       >
-        Prompter
+        {t("nav.prompter")}
       </button>
       <button
         type="button"
         class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors {ui.page === 'settings' ? 'palette-item-selected' : 'palette-muted hover:text-[var(--p-text)]'}"
         onclick={() => (ui.page = "settings")}
       >
-        Configuración
+        {t("nav.settings")}
       </button>
     </nav>
   </header>
