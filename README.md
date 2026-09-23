@@ -1,4 +1,4 @@
-<img width="1158" height="512" alt="link-router-banner" src="https://github.com/user-attachments/assets/24ef99f1-854a-4064-a370-c1373e0dfffb" />
+<img width="1158" height="512" alt="link-router-banner" src="docs/screenshots/banner.jpg" />
 
 
 # LinkRouter
@@ -11,6 +11,16 @@ When you click a link in any non-browser app (Slack, Discord, Teams, mail client
 - shows a fast keyboard-driven **prompter** (on-top, focused) to pick a browser/profile on the fly.
 
 It stays in the **system tray**, hides on close, and relocates links with zero clicks when a rule matches.
+
+## Screenshots
+
+When a link has no matching rule, LinkRouter brings up a fast keyboard-driven prompter to pick the browser and profile on the fly:
+
+<img width="900" alt="prompter" src="docs/screenshots/prompter.png" />
+
+Configure routing rules, detected browsers, and defaults from the settings:
+
+<img width="900" alt="settings" src="docs/screenshots/settings.png" />
 
 ## Tech Stack & Dependencies
 
