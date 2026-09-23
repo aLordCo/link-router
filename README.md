@@ -13,14 +13,18 @@ When you click a link in any non-browser app (Slack, Discord, Teams, mail client
 It stays in the **system tray**, hides on close, and relocates links with zero clicks when a rule matches.
 
 ## Screenshots
-
-When a link has no matching rule, LinkRouter brings up a fast keyboard-driven prompter to pick the browser and profile on the fly:
-
-<img width="900" alt="prompter" src="docs/screenshots/prompter.png" />
-
-Configure routing rules, detected browsers, and defaults from the settings:
-
-<img width="900" alt="settings" src="docs/screenshots/settings.png" />
+<table>
+  <tr>
+    <td align="center">
+      <img width="400" alt="prompter" src="docs/screenshots/prompter.png" />
+      <br/><em>Prompter: pick a browser &amp; profile</em>
+    </td>
+    <td align="center">
+      <img width="400" alt="settings" src="docs/screenshots/settings.png" />
+      <br/><em>Settings: rules, browsers &amp; defaults</em>
+    </td>
+  </tr>
+</table>
 
 ## Tech Stack & Dependencies
 
